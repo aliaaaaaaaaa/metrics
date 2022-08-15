@@ -75,6 +75,20 @@ func (s *Set) InitPush(pushURL string, interval time.Duration, extraLabels strin
 	return InitPushExt(pushURL, interval, extraLabels, writeMetrics)
 }
 
+func (s *Set) PushMetric(pushURL string, timeout time.Duration, extraLabels string) error {
+	writeMetrics := func(w io.Writer) {
+		s.WritePrometheus(w)
+	}
+	return pushMetric(pushURL, extraLabels, timeout, writeMetrics)
+}
+
+func PushMetric(pushURL string, timeout time.Duration, extraLabels string) error {
+	writeMetrics := func(w io.Writer) {
+		WritePrometheus(w, true)
+	}
+	return pushMetric(pushURL, extraLabels, timeout, writeMetrics)
+}
+
 // InitPushExt sets up periodic push for metrics obtained by calling writeMetrics with the given interval.
 //
 // extraLabels may contain comma-separated list of `label="value"` labels, which will be added
@@ -174,14 +188,11 @@ func InitPushExt(pushURL string, interval time.Duration, extraLabels string, wri
 	return nil
 }
 
-func PushMetric(pushURL string, extraLabels string, timeout time.Duration) error {
+func pushMetric(pushURL string, extraLabels string, timeout time.Duration, writeMetrics func(w io.Writer)) error {
 	if err := validateTags(extraLabels); err != nil {
 		return fmt.Errorf("invalid extraLabels=%q: %w", extraLabels, err)
 	}
 
-	writeMetrics := func(w io.Writer) {
-		WriteProcessMetrics(w)
-	}
 	pu, err := url.Parse(pushURL)
 	if err != nil {
 		return fmt.Errorf("cannot parse pushURL=%q: %w", pushURL, err)
